@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev Squad Tracker & Feed</title>
+    <style>
+        :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --accent: #38bdf8; --success: #22c55e; --error: #ef4444; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        
+        #toast { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white; display: none; z-index: 1000; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+
+        .tabs { display: flex; gap: 10px; margin: 20px 0; background: var(--card); padding: 5px; border-radius: 12px; position: sticky; top: 10px; z-index: 100; }
+        .tab-btn { padding: 10px 25px; border-radius: 8px; cursor: pointer; border: none; background: none; color: white; font-weight: bold; }
+        .tab-btn.active { background: var(--accent); color: #0f172a; }
+
+        .page { display: none; width: 100%; max-width: 800px; animation: fadeIn 0.3s; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Трекер */
+        .calendar-container { background: var(--card); padding: 20px; border-radius: 16px; margin-bottom: 20px; }
+        .calendar-strip { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
+        .calendar-day { min-width: 55px; height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #334155; border-radius: 10px; cursor: pointer; position: relative; }
+        .calendar-day.active { background: var(--accent); color: #0f172a; font-weight: bold; }
+        .has-work { width: 6px; height: 6px; background: var(--success); border-radius: 50%; position: absolute; bottom: 8px; }
+
+        .user-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
+        .user-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid #334155; }
+        
+        /* Лента */
+        .post-card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; }
+        .post-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.8rem; color: #94a3b8; }
+        .delete-btn { color: var(--error); cursor: pointer; font-size: 0.7rem; border: 1px solid var(--error); padding: 2px 5px; border-radius: 4px; }
+        .post-content img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
+
+        .comments-box { margin-top: 15px; padding-top: 10px; border-top: 1px solid #334155; }
+        .comment { font-size: 0.8rem; margin-bottom: 5px; background: #0f172a; padding: 6px; border-radius: 4px; }
+
+        input, select, textarea { background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 5px; }
+        button { background: var(--accent); color: #0f172a; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div class="tabs">
+    <button class="tab-btn active" onclick="showPage('tracker')">📅 Трекер</button>
+    <button class="tab-btn" onclick="showPage('feed')">💬 Лента</button>
+</div>
+
+<div id="tracker" class="page active">
+    <div class="calendar-container">
+        <div class="calendar-strip" id="calendarStrip"></div>
+        <div id="daySummary" style="margin-top:15px;">
+            <h3 id="selectedDateLabel" style="color:var(--accent)">Загрузка...</h3>
+            <div id="dayContent"></div>
+        </div>
+    </div>
+    <div class="user-grid" id="userGrid"></div>
+</div>
+
+<div id="feed" class="page">
+    <div class="post-card">
+        <h3 style="margin-top:0">Новый пост</h3>
+        <select id="postUser"><option>Макс</option><option>Диас</option><option>Кука</option><option>Ислам</option></select>
+        <input type="password" id="postPass" placeholder="Пароль">
+        <textarea id="postText" placeholder="Текст поста или ссылка на картинку..."></textarea>
+        <button onclick="window.createPost()">Опубликовать</button>
+    </div>
+    <div id="feedPosts"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, doc, updateDoc, arrayUnion, addDoc, deleteDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyCw3IV_lg5NThfe7GZ-4OHl16O7r88W0Ao",
+        authDomain: "progress-team-c6f18.firebaseapp.com",
+        projectId: "progress-team-c6f18",
+        storageBucket: "progress-team-c6f18.firebasestorage.app",
+        messagingSenderId: "662964678146",
+        appId: "1:662964678146:web:4276e50222ead111c5811b",
+        measurementId: "G-5SGT9XCNDB"
+    };
+
+    const passwords = { "Макс": "1111", "Диас": "2222", "Кука": "3333", "Ислам": "4444" };
+    const team = ["Макс", "Диас", "Кука", "Ислам"];
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let selectedDate = new Date().toISOString().split('T')[0];
+    let allUsersData = [];
+
+    window.showPage = (id) => {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.target.classList.add('active');
+    };
+
+    function showToast(text, color = 'var(--success)') {
+        const t = document.getElementById('toast');
+        t.innerText = text; t.style.background = color; t.style.display = 'block';
+        setTimeout(() => t.style.display = 'none', 3000);
+    }
+
+    // --- ТРЕКЕР ---
+    function initCalendar() {
+        const strip = document.getElementById('calendarStrip');
+        for (let i = -10; i <= 5; i++) {
+            const d = new Date(); d.setDate(d.getDate() + i);
+            const ds = d.toISOString().split('T')[0];
+            const div = document.createElement('div');
+            div.className = `calendar-day ${ds === selectedDate ? 'active' : ''}`;
+            div.id = `day-${ds}`;
+            div.innerHTML = `<small>${d.toLocaleString('ru',{month:'short'})}</small><b>${d.getDate()}</b>`;
+            div.onclick = () => {
+                selectedDate = ds;
+                document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('active'));
+                div.classList.add('active');
+                updateTrackerUI();
+            };
+            strip.appendChild(div);
+        }
+    }
+
+    function updateTrackerUI() {
+        document.getElementById('selectedDateLabel').innerText = `Записи за ${selectedDate}`;
+        const cont = document.getElementById('dayContent');
+        cont.innerHTML = team.map(name => {
+            const user = allUsersData.find(u => u.id === name);
+            const task = user?.tasks?.find(t => t.date === selectedDate);
+            return `<div style="margin-bottom:5px"><b>${name}:</b> ${task ? task.text : '---'}</div>`;
+        }).join('');
+        
+        // Точки активности
+        allUsersData.forEach(u => u.tasks?.forEach(t => {
+            const el = document.getElementById(`day-${t.date}`);
+            if(el && !el.querySelector('.has-work')) el.innerHTML += '<div class="has-work"></div>';
+        }));
+    }
+
+    window.saveTracker = async (name) => {
+        const p = document.getElementById(`pass-${name}`).value;
+        const t = document.getElementById(`task-${name}`).value;
+        if(p !== passwords[name]) return showToast("Пароль!", "var(--error)");
+        
+        const userRef = doc(db, "users", name);
+        try {
+            const snap = await getDoc(userRef);
+            if (!snap.exists()) {
+                await setDoc(userRef, { tasks: [{text: t, date: selectedDate}] });
+            } else {
+                await updateDoc(userRef, { tasks: arrayUnion({ text: t, date: selectedDate }) });
+            }
+            document.getElementById(`task-${name}`).value = '';
+            showToast("Сохранено!");
+        } catch(e) { console.error(e); showToast("Ошибка БД", "var(--error)"); }
+    };
+
+    // --- ЛЕНТА ---
+    window.createPost = async () => {
+        const u = document.getElementById('postUser').value;
+        const p = document.getElementById('postPass').value;
+        const t = document.getElementById('postText').value;
+        if(p !== passwords[u]) return showToast("Пароль!", "var(--error)");
+        await addDoc(collection(db, "feed"), { userName: u, text: t, timestamp: Date.now(), date: new Date().toLocaleString(), comments: [] });
+        document.getElementById('postText').value = '';
+        showToast("Пост добавлен!");
+    };
+
+    window.deletePost = async (id, author) => {
+        const p = prompt(`Введите пароль для ${author}, чтобы удалить:`);
+        if(p === passwords[author]) {
+            await deleteDoc(doc(db, "feed", id));
+            showToast("Удалено");
+        } else {
+            alert("Неверный пароль");
+        }
+    };
+
+    window.addComment = async (id) => {
+        const u = document.getElementById(`cu-${id}`).value;
+        const t = document.getElementById(`ci-${id}`).value;
+        if(!t) return;
+        await updateDoc(doc(db, "feed", id), { comments: arrayUnion({ userName: u, text: t }) });
+        document.getElementById(`ci-${id}`).value = '';
+    };
+
+    // --- СЛУШАТЕЛИ ---
+    onSnapshot(collection(db, "users"), (s) => {
+        allUsersData = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        updateTrackerUI();
+        document.getElementById('userGrid').innerHTML = team.map(n => `
+            <div class="user-card">
+                <b>${n}</b>
+                <input type="password" id="pass-${n}" placeholder="Пароль" style="margin:5px 0">
+                <input type="text" id="task-${n}" placeholder="Что сделал?">
+                <button onclick="window.saveTracker('${n}')">ОК</button>
+            </div>
+        `).join('');
+    });
+
+    onSnapshot(query(collection(db, "feed"), orderBy("timestamp", "desc")), (s) => {
+        const cont = document.getElementById('feedPosts');
+        cont.innerHTML = '';
+        s.forEach(docSnap => {
+            const p = docSnap.data();
+            const id = docSnap.id;
+            const img = p.text.match(/(https?:\/\/.*\.(?:png|jpg|jpeg|gif))/i);
+            cont.innerHTML += `
+                <div class="post-card">
+                    <div class="post-header">
+                        <span>${p.userName} • ${p.date}</span>
+                        <span class="delete-btn" onclick="window.deletePost('${id}', '${p.userName}')">удалить</span>
+                    </div>
+                    <div class="post-content">${p.text} ${img ? `<img src="${img[0]}">` : ''}</div>
+                    <div class="comments-box">
+                        ${p.comments.map(c => `<div class="comment"><b>${c.userName}:</b> ${c.text}</div>`).join('')}
+                        <div style="display:flex; gap:5px">
+                            <select id="cu-${id}" style="width:70px"><option>Макс</option><option>Диас</option><option>Кука</option><option>Ислам</option></select>
+                            <input id="ci-${id}" placeholder="Ответ...">
+                            <button onclick="window.addComment('${id}')" style="width:40px">></button>
+                        </div>
+                    </div>
+                </div>`;
+        });
+    });
+
+    initCalendar();
+</script>
+</body>
+</html>
