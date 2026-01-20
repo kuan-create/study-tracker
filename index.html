@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dev Squad OS | Full Streaks</title>
+    <title>Dev Squad OS | Secure Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { 
@@ -29,11 +29,11 @@
         .card { background: var(--card); border-radius: 20px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; position: relative; }
         input, textarea, select { background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; }
         button { background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-logout { background: var(--error); color: white; width: auto; padding: 0 15px; margin-left: 10px; }
 
         .ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #30363d; border: 2px solid var(--accent); }
         .ava-l { width: 80px; height: 80px; display: block; margin: 0 auto 15px; }
 
-        /* ОФОРМЛЕНИЕ СТРИКА КАК НА ФОТО */
         .streak-mini { color: #ff9d00; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-top: -2px; }
 
         .chat-msgs { height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
@@ -58,7 +58,7 @@
 
 <div id="loginPage">
     <div class="login-card">
-        <h2>Dev Squad</h2>
+        <h2 style="margin-bottom:20px">Dev Squad</h2>
         <select id="loginUser">
             <option>Макс</option><option>Диас</option><option>Кука</option><option>Ислам</option><option>Тест</option>
         </select>
@@ -76,7 +76,10 @@
                 <div id="myHeaderStreak" class="streak-mini">🔥 0 дн.</div>
             </div>
         </div>
-        <button onclick="toggleTheme()" style="width:45px; height:45px; border-radius:12px; background:var(--card); border:1px solid var(--border)">🌓</button>
+        <div style="display:flex; gap:10px">
+            <button onclick="toggleTheme()" style="width:45px; height:45px; border-radius:12px; background:var(--card); border:1px solid var(--border)">🌓</button>
+            <button onclick="logout()" class="btn-logout">Выйти</button>
+        </div>
     </header>
 
     <div class="tabs">
@@ -90,7 +93,7 @@
         <div class="main-content">
             <div id="page-feed" class="page active">
                 <div class="card">
-                    <textarea id="postText" placeholder="Что нового? (Картинки по ссылкам отобразятся сами)"></textarea>
+                    <textarea id="postText" placeholder="Что нового?"></textarea>
                     <button onclick="sendPost()">Опубликовать</button>
                 </div>
                 <div id="feedList"></div>
@@ -125,16 +128,17 @@
 
             <div id="page-profile" class="page">
                 <div class="card" style="text-align:center">
+                    <h3>Мой Аватар</h3>
                     <img id="profileAvaPreview" class="ava ava-l" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
-                    <input id="avaInput" placeholder="Ссылка на фото для аватара">
-                    <button onclick="updateProfile()">Обновить аватар</button>
+                    <input id="avaInput" placeholder="Ссылка на фото">
+                    <button onclick="updateProfile()">Обновить профиль</button>
                 </div>
             </div>
         </div>
 
         <div class="side-chat">
             <div class="card" style="height:650px; display:flex; flex-direction:column">
-                <h4>Командный чат</h4>
+                <h4>Чат команды</h4>
                 <div class="chat-msgs" id="chatMsgs"></div>
                 <input id="chatInput" placeholder="Текст..." style="margin-top:10px" onkeydown="if(event.key==='Enter') sendChat()">
             </div>
@@ -155,6 +159,7 @@
         appId: "1:662964678146:web:4276e50222ead111c5811b"
     };
 
+    const passwords = { "Макс":"12345", "Диас":"54321", "Кука":"98765", "Ислам":"56789", "Тест":"00000" };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let currentUser = null;
@@ -168,7 +173,6 @@
         return match ? `<img src="${match[0]}" class="inline-img" loading="lazy">` : '';
     };
 
-    // Функция для расчета стрика
     const getStreak = (userTasks) => {
         const dates = [...new Set((userTasks || []).map(t => t.date))].sort().reverse();
         let streak = 0; let check = getAstanaTime();
@@ -180,16 +184,30 @@
     };
 
     window.login = () => {
-        currentUser = document.getElementById('loginUser').value;
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('mainApp').style.display = 'block';
-        document.getElementById('userName').innerText = currentUser;
+        const user = document.getElementById('loginUser').value;
+        const pass = document.getElementById('loginPass').value;
         
-        const now = getAstanaTime();
-        document.getElementById('astanaDayNum').innerText = now.getDate();
-        document.getElementById('astanaDate').innerText = now.toLocaleString('ru', { month:'long', weekday:'long' }).toUpperCase();
-        
-        initData();
+        if (passwords[user] === pass) {
+            currentUser = user;
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('userName').innerText = currentUser;
+            document.getElementById('loginPass').value = '';
+            
+            const now = getAstanaTime();
+            document.getElementById('astanaDayNum').innerText = now.getDate();
+            document.getElementById('astanaDate').innerText = now.toLocaleString('ru', { month:'long', weekday:'long' }).toUpperCase();
+            
+            initData();
+        } else {
+            alert("❌ Неверный пароль для пользователя " + user);
+        }
+    };
+
+    window.logout = () => {
+        currentUser = null;
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginPage').style.display = 'flex';
     };
 
     window.showPage = (id, e) => {
@@ -204,7 +222,7 @@
     window.updateProfile = async () => {
         const url = document.getElementById('avaInput').value;
         if(url) await setDoc(doc(db, "users", currentUser), { avatar: url }, { merge: true });
-        alert("Обновлено!");
+        alert("Профиль обновлен!");
     };
 
     window.deleteItem = async (coll, id) => {
@@ -232,7 +250,7 @@
             tasks: arrayUnion({ text, date: getToday() }) 
         }, { merge: true });
         document.getElementById('taskInput').value = '';
-        alert("Готово!");
+        alert("Записано!");
     };
 
     window.sendKB = async () => {
@@ -256,7 +274,6 @@
             }
             document.getElementById('myHeaderStreak').innerText = `🔥 ${getStreak(me?.tasks)} дн.`;
 
-            // ТРЕКЕР
             const team = ["Макс", "Диас", "Кука", "Ислам", "Тест"];
             document.getElementById('teamActivity').innerHTML = team.map(name => {
                 const u = users[name];
