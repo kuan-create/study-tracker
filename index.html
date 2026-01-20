@@ -3,78 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dev Squad Tracker & Feed</title>
+    <title>Dev Squad OS | Full Streaks</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0f172a; --card: #1e293b; --text: #f1f5f9; --accent: #38bdf8; --success: #22c55e; --error: #ef4444; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        :root { 
+            --bg: #0b0e14; --card: #161b22; --accent: #38bdf8; --text: #f8fafc; --border: #30363d; --msg-bg: #21262d; --error: #f43f5e;
+        }
+        .light-theme { 
+            --bg: #f0f2f5; --card: #ffffff; --accent: #007aff; --text: #1c1e21; --border: #dddfe2; --msg-bg: #e4e6eb; --error: #e11d48;
+        }
         
-        #toast { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white; display: none; z-index: 1000; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); margin: 0; transition: 0.3s; line-height: 1.5; }
+        #loginPage { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+        .login-card { background: var(--card); padding: 30px; border-radius: 24px; width: 320px; text-align: center; border: 1px solid var(--border); }
 
-        .tabs { display: flex; gap: 10px; margin: 20px 0; background: var(--card); padding: 5px; border-radius: 12px; position: sticky; top: 10px; z-index: 100; }
-        .tab-btn { padding: 10px 25px; border-radius: 8px; cursor: pointer; border: none; background: none; color: white; font-weight: bold; }
-        .tab-btn.active { background: var(--accent); color: #0f172a; }
+        #mainApp { display: none; max-width: 1200px; width: 100%; margin: 0 auto; padding: 20px; box-sizing: border-box; }
+        .layout { display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+        @media (max-width: 950px) { .layout { grid-template-columns: 1fr; } }
 
-        .page { display: none; width: 100%; max-width: 800px; animation: fadeIn 0.3s; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: var(--card); border-radius: 20px; border: 1px solid var(--border); margin-bottom: 20px; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { padding: 10px 18px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: 600; white-space: nowrap; }
+        .tab-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .card { background: var(--card); border-radius: 20px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; position: relative; }
+        input, textarea, select { background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text); padding: 12px; border-radius: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; }
+        button { background: var(--accent); color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; transition: 0.2s; }
+
+        .ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #30363d; border: 2px solid var(--accent); }
+        .ava-l { width: 80px; height: 80px; display: block; margin: 0 auto 15px; }
+
+        /* ОФОРМЛЕНИЕ СТРИКА КАК НА ФОТО */
+        .streak-mini { color: #ff9d00; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; gap: 4px; margin-top: -2px; }
+
+        .chat-msgs { height: 500px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; }
+        .msg-row { display: flex; gap: 10px; max-width: 90%; }
+        .msg-row.me { align-self: flex-end; flex-direction: row-reverse; }
+        .msg { background: var(--msg-bg); padding: 12px; border-radius: 18px; overflow-wrap: anywhere; }
+        .msg.me { background: var(--accent); color: white; border-bottom-right-radius: 4px; }
+        
+        .inline-img { max-width: 100%; border-radius: 10px; margin-top: 8px; display: block; border: 1px solid rgba(255,255,255,0.1); }
+        .code-view { background: #000; color: #39ff14; padding: 15px; border-radius: 10px; font-family: 'Courier New', monospace; white-space: pre-wrap; font-size: 0.85rem; border-left: 4px solid var(--accent); margin-top: 10px; }
+        .full-link { display: block; word-break: break-all; color: var(--accent); font-size: 0.85rem; margin-top: 5px; text-decoration: underline; }
+        
+        .del-btn { background: none; color: var(--error); border: none; font-size: 10px; cursor: pointer; text-decoration: underline; margin-top: 5px; width: auto; opacity: 0.7; }
+        .today-hero { background: linear-gradient(135deg, var(--accent), #1e40af); color: white; padding: 25px; border-radius: 24px; text-align: center; margin-bottom: 20px; }
+        
+        .user-row { padding: 12px; background: rgba(255,255,255,0.03); border-radius: 15px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .page { display: none; }
         .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Трекер */
-        .calendar-container { background: var(--card); padding: 20px; border-radius: 16px; margin-bottom: 20px; }
-        .calendar-strip { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 10px; }
-        .calendar-day { min-width: 55px; height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #334155; border-radius: 10px; cursor: pointer; position: relative; }
-        .calendar-day.active { background: var(--accent); color: #0f172a; font-weight: bold; }
-        .has-work { width: 6px; height: 6px; background: var(--success); border-radius: 50%; position: absolute; bottom: 8px; }
-
-        .user-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; }
-        .user-card { background: var(--card); padding: 15px; border-radius: 16px; border: 1px solid #334155; }
-        
-        /* Лента */
-        .post-card { background: var(--card); border-radius: 16px; padding: 20px; margin-bottom: 20px; position: relative; }
-        .post-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.8rem; color: #94a3b8; }
-        .delete-btn { color: var(--error); cursor: pointer; font-size: 0.7rem; border: 1px solid var(--error); padding: 2px 5px; border-radius: 4px; }
-        .post-content img { max-width: 100%; border-radius: 8px; margin-top: 10px; }
-
-        .comments-box { margin-top: 15px; padding-top: 10px; border-top: 1px solid #334155; }
-        .comment { font-size: 0.8rem; margin-bottom: 5px; background: #0f172a; padding: 6px; border-radius: 4px; }
-
-        input, select, textarea { background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 5px; }
-        button { background: var(--accent); color: #0f172a; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; }
     </style>
 </head>
 <body>
 
-<div id="toast"></div>
-
-<div class="tabs">
-    <button class="tab-btn active" onclick="showPage('tracker')">📅 Трекер</button>
-    <button class="tab-btn" onclick="showPage('feed')">💬 Лента</button>
+<div id="loginPage">
+    <div class="login-card">
+        <h2>Dev Squad</h2>
+        <select id="loginUser">
+            <option>Макс</option><option>Диас</option><option>Кука</option><option>Ислам</option><option>Тест</option>
+        </select>
+        <input type="password" id="loginPass" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+    </div>
 </div>
 
-<div id="tracker" class="page active">
-    <div class="calendar-container">
-        <div class="calendar-strip" id="calendarStrip"></div>
-        <div id="daySummary" style="margin-top:15px;">
-            <h3 id="selectedDateLabel" style="color:var(--accent)">Загрузка...</h3>
-            <div id="dayContent"></div>
+<div id="mainApp">
+    <header>
+        <div style="display:flex; align-items:center; gap:12px">
+            <img id="myAva" class="ava" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+            <div>
+                <b id="userName">User</b>
+                <div id="myHeaderStreak" class="streak-mini">🔥 0 дн.</div>
+            </div>
+        </div>
+        <button onclick="toggleTheme()" style="width:45px; height:45px; border-radius:12px; background:var(--card); border:1px solid var(--border)">🌓</button>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showPage('feed', event)">💬 Лента</button>
+        <button class="tab-btn" onclick="showPage('tracker', event)">📅 Трекер</button>
+        <button class="tab-btn" onclick="showPage('kb', event)">📚 Код & Ресурсы</button>
+        <button class="tab-btn" onclick="showPage('profile', event)">👤 Профиль</button>
+    </div>
+
+    <div class="layout">
+        <div class="main-content">
+            <div id="page-feed" class="page active">
+                <div class="card">
+                    <textarea id="postText" placeholder="Что нового? (Картинки по ссылкам отобразятся сами)"></textarea>
+                    <button onclick="sendPost()">Опубликовать</button>
+                </div>
+                <div id="feedList"></div>
+            </div>
+
+            <div id="page-tracker" class="page">
+                <div class="today-hero">
+                    <h1 id="astanaDayNum" style="font-size:4rem; margin:0">00</h1>
+                    <div id="astanaDate">Загрузка...</div>
+                </div>
+                <div class="card">
+                    <h4>Мой отчет сегодня</h4>
+                    <textarea id="taskInput" placeholder="Что ты сегодня сделал?"></textarea>
+                    <button onclick="saveTask()">Сохранить активность</button>
+                </div>
+                <h3>Активность команды</h3>
+                <div id="teamActivity"></div>
+            </div>
+
+            <div id="page-kb" class="page">
+                <div class="card">
+                    <select id="kbType">
+                        <option value="code">💻 Чистый код</option>
+                        <option value="link">🔗 Полезная ссылка</option>
+                    </select>
+                    <input id="kbTitle" placeholder="Заголовок">
+                    <textarea id="kbContent" placeholder="Вставь код или полную ссылку..."></textarea>
+                    <button onclick="sendKB()">Добавить в базу</button>
+                </div>
+                <div id="kbList"></div>
+            </div>
+
+            <div id="page-profile" class="page">
+                <div class="card" style="text-align:center">
+                    <img id="profileAvaPreview" class="ava ava-l" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                    <input id="avaInput" placeholder="Ссылка на фото для аватара">
+                    <button onclick="updateProfile()">Обновить аватар</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="side-chat">
+            <div class="card" style="height:650px; display:flex; flex-direction:column">
+                <h4>Командный чат</h4>
+                <div class="chat-msgs" id="chatMsgs"></div>
+                <input id="chatInput" placeholder="Текст..." style="margin-top:10px" onkeydown="if(event.key==='Enter') sendChat()">
+            </div>
         </div>
     </div>
-    <div class="user-grid" id="userGrid"></div>
-</div>
-
-<div id="feed" class="page">
-    <div class="post-card">
-        <h3 style="margin-top:0">Новый пост</h3>
-        <select id="postUser"><option>Макс</option><option>Диас</option><option>Кука</option><option>Ислам</option></select>
-        <input type="password" id="postPass" placeholder="Пароль">
-        <textarea id="postText" placeholder="Текст поста или ссылка на картинку..."></textarea>
-        <button onclick="window.createPost()">Опубликовать</button>
-    </div>
-    <div id="feedPosts"></div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, doc, updateDoc, arrayUnion, addDoc, deleteDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, doc, setDoc, addDoc, query, orderBy, deleteDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyCw3IV_lg5NThfe7GZ-4OHl16O7r88W0Ao",
@@ -82,155 +152,183 @@
         projectId: "progress-team-c6f18",
         storageBucket: "progress-team-c6f18.firebasestorage.app",
         messagingSenderId: "662964678146",
-        appId: "1:662964678146:web:4276e50222ead111c5811b",
-        measurementId: "G-5SGT9XCNDB"
+        appId: "1:662964678146:web:4276e50222ead111c5811b"
     };
 
-    const passwords = { "Макс": "1111", "Диас": "2222", "Кука": "3333", "Ислам": "4444" };
-    const team = ["Макс", "Диас", "Кука", "Ислам"];
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+    let currentUser = null;
+    let users = {};
 
-    let selectedDate = new Date().toISOString().split('T')[0];
-    let allUsersData = [];
+    const getAstanaTime = () => new Date(new Date().getTime() + (5 * 60 * 60 * 1000));
+    const getToday = () => getAstanaTime().toISOString().split('T')[0];
+    const parseMedia = (text) => {
+        const imgRegex = /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp|svg))/i;
+        const match = text.match(imgRegex);
+        return match ? `<img src="${match[0]}" class="inline-img" loading="lazy">` : '';
+    };
 
-    window.showPage = (id) => {
+    // Функция для расчета стрика
+    const getStreak = (userTasks) => {
+        const dates = [...new Set((userTasks || []).map(t => t.date))].sort().reverse();
+        let streak = 0; let check = getAstanaTime();
+        if(!dates.includes(getToday())) check.setDate(check.getDate() - 1);
+        for(let i=0; i<60; i++) {
+            if(dates.includes(check.toISOString().split('T')[0])) { streak++; check.setDate(check.getDate()-1); } else break;
+        }
+        return streak;
+    };
+
+    window.login = () => {
+        currentUser = document.getElementById('loginUser').value;
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('userName').innerText = currentUser;
+        
+        const now = getAstanaTime();
+        document.getElementById('astanaDayNum').innerText = now.getDate();
+        document.getElementById('astanaDate').innerText = now.toLocaleString('ru', { month:'long', weekday:'long' }).toUpperCase();
+        
+        initData();
+    };
+
+    window.showPage = (id, e) => {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        event.target.classList.add('active');
+        document.getElementById('page-'+id).classList.add('active');
+        e.target.classList.add('active');
     };
 
-    function showToast(text, color = 'var(--success)') {
-        const t = document.getElementById('toast');
-        t.innerText = text; t.style.background = color; t.style.display = 'block';
-        setTimeout(() => t.style.display = 'none', 3000);
-    }
+    window.toggleTheme = () => document.body.classList.toggle('light-theme');
 
-    // --- ТРЕКЕР ---
-    function initCalendar() {
-        const strip = document.getElementById('calendarStrip');
-        for (let i = -10; i <= 5; i++) {
-            const d = new Date(); d.setDate(d.getDate() + i);
-            const ds = d.toISOString().split('T')[0];
-            const div = document.createElement('div');
-            div.className = `calendar-day ${ds === selectedDate ? 'active' : ''}`;
-            div.id = `day-${ds}`;
-            div.innerHTML = `<small>${d.toLocaleString('ru',{month:'short'})}</small><b>${d.getDate()}</b>`;
-            div.onclick = () => {
-                selectedDate = ds;
-                document.querySelectorAll('.calendar-day').forEach(el=>el.classList.remove('active'));
-                div.classList.add('active');
-                updateTrackerUI();
-            };
-            strip.appendChild(div);
-        }
-    }
-
-    function updateTrackerUI() {
-        document.getElementById('selectedDateLabel').innerText = `Записи за ${selectedDate}`;
-        const cont = document.getElementById('dayContent');
-        cont.innerHTML = team.map(name => {
-            const user = allUsersData.find(u => u.id === name);
-            const task = user?.tasks?.find(t => t.date === selectedDate);
-            return `<div style="margin-bottom:5px"><b>${name}:</b> ${task ? task.text : '---'}</div>`;
-        }).join('');
-        
-        // Точки активности
-        allUsersData.forEach(u => u.tasks?.forEach(t => {
-            const el = document.getElementById(`day-${t.date}`);
-            if(el && !el.querySelector('.has-work')) el.innerHTML += '<div class="has-work"></div>';
-        }));
-    }
-
-    window.saveTracker = async (name) => {
-        const p = document.getElementById(`pass-${name}`).value;
-        const t = document.getElementById(`task-${name}`).value;
-        if(p !== passwords[name]) return showToast("Пароль!", "var(--error)");
-        
-        const userRef = doc(db, "users", name);
-        try {
-            const snap = await getDoc(userRef);
-            if (!snap.exists()) {
-                await setDoc(userRef, { tasks: [{text: t, date: selectedDate}] });
-            } else {
-                await updateDoc(userRef, { tasks: arrayUnion({ text: t, date: selectedDate }) });
-            }
-            document.getElementById(`task-${name}`).value = '';
-            showToast("Сохранено!");
-        } catch(e) { console.error(e); showToast("Ошибка БД", "var(--error)"); }
+    window.updateProfile = async () => {
+        const url = document.getElementById('avaInput').value;
+        if(url) await setDoc(doc(db, "users", currentUser), { avatar: url }, { merge: true });
+        alert("Обновлено!");
     };
 
-    // --- ЛЕНТА ---
-    window.createPost = async () => {
-        const u = document.getElementById('postUser').value;
-        const p = document.getElementById('postPass').value;
-        const t = document.getElementById('postText').value;
-        if(p !== passwords[u]) return showToast("Пароль!", "var(--error)");
-        await addDoc(collection(db, "feed"), { userName: u, text: t, timestamp: Date.now(), date: new Date().toLocaleString(), comments: [] });
+    window.deleteItem = async (coll, id) => {
+        if(confirm("Удалить?")) await deleteDoc(doc(db, coll, id));
+    };
+
+    window.sendChat = async () => {
+        const text = document.getElementById('chatInput').value;
+        if(!text.trim()) return;
+        await addDoc(collection(db, "chats"), { user: currentUser, text, ts: Date.now() });
+        document.getElementById('chatInput').value = '';
+    };
+
+    window.sendPost = async () => {
+        const text = document.getElementById('postText').value;
+        if(!text.trim()) return;
+        await addDoc(collection(db, "feed"), { author: currentUser, text, ts: Date.now() });
         document.getElementById('postText').value = '';
-        showToast("Пост добавлен!");
     };
 
-    window.deletePost = async (id, author) => {
-        const p = prompt(`Введите пароль для ${author}, чтобы удалить:`);
-        if(p === passwords[author]) {
-            await deleteDoc(doc(db, "feed", id));
-            showToast("Удалено");
-        } else {
-            alert("Неверный пароль");
-        }
+    window.saveTask = async () => {
+        const text = document.getElementById('taskInput').value;
+        if(!text.trim()) return;
+        await setDoc(doc(db, "users", currentUser), { 
+            tasks: arrayUnion({ text, date: getToday() }) 
+        }, { merge: true });
+        document.getElementById('taskInput').value = '';
+        alert("Готово!");
     };
 
-    window.addComment = async (id) => {
-        const u = document.getElementById(`cu-${id}`).value;
-        const t = document.getElementById(`ci-${id}`).value;
-        if(!t) return;
-        await updateDoc(doc(db, "feed", id), { comments: arrayUnion({ userName: u, text: t }) });
-        document.getElementById(`ci-${id}`).value = '';
+    window.sendKB = async () => {
+        const type = document.getElementById('kbType').value;
+        const title = document.getElementById('kbTitle').value;
+        const content = document.getElementById('kbContent').value;
+        if(!title || !content) return;
+        await addDoc(collection(db, "kb"), { author: currentUser, type, title, content, ts: Date.now() });
+        document.getElementById('kbTitle').value = ''; document.getElementById('kbContent').value = '';
     };
 
-    // --- СЛУШАТЕЛИ ---
-    onSnapshot(collection(db, "users"), (s) => {
-        allUsersData = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        updateTrackerUI();
-        document.getElementById('userGrid').innerHTML = team.map(n => `
-            <div class="user-card">
-                <b>${n}</b>
-                <input type="password" id="pass-${n}" placeholder="Пароль" style="margin:5px 0">
-                <input type="text" id="task-${n}" placeholder="Что сделал?">
-                <button onclick="window.saveTracker('${n}')">ОК</button>
-            </div>
-        `).join('');
-    });
+    function initData() {
+        const defAva = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-    onSnapshot(query(collection(db, "feed"), orderBy("timestamp", "desc")), (s) => {
-        const cont = document.getElementById('feedPosts');
-        cont.innerHTML = '';
-        s.forEach(docSnap => {
-            const p = docSnap.data();
-            const id = docSnap.id;
-            const img = p.text.match(/(https?:\/\/.*\.(?:png|jpg|jpeg|gif))/i);
-            cont.innerHTML += `
-                <div class="post-card">
-                    <div class="post-header">
-                        <span>${p.userName} • ${p.date}</span>
-                        <span class="delete-btn" onclick="window.deletePost('${id}', '${p.userName}')">удалить</span>
-                    </div>
-                    <div class="post-content">${p.text} ${img ? `<img src="${img[0]}">` : ''}</div>
-                    <div class="comments-box">
-                        ${p.comments.map(c => `<div class="comment"><b>${c.userName}:</b> ${c.text}</div>`).join('')}
-                        <div style="display:flex; gap:5px">
-                            <select id="cu-${id}" style="width:70px"><option>Макс</option><option>Диас</option><option>Кука</option><option>Ислам</option></select>
-                            <input id="ci-${id}" placeholder="Ответ...">
-                            <button onclick="window.addComment('${id}')" style="width:40px">></button>
+        onSnapshot(collection(db, "users"), s => {
+            s.docs.forEach(d => users[d.id] = d.data());
+            const me = users[currentUser];
+            if(me?.avatar) {
+                document.getElementById('myAva').src = me.avatar;
+                document.getElementById('profileAvaPreview').src = me.avatar;
+            }
+            document.getElementById('myHeaderStreak').innerText = `🔥 ${getStreak(me?.tasks)} дн.`;
+
+            // ТРЕКЕР
+            const team = ["Макс", "Диас", "Кука", "Ислам", "Тест"];
+            document.getElementById('teamActivity').innerHTML = team.map(name => {
+                const u = users[name];
+                const streak = getStreak(u?.tasks);
+                const todayTask = u?.tasks?.filter(t => t.date === getToday()).pop();
+                return `<div class="user-row">
+                    <div style="display:flex; justify-content:space-between; align-items:center">
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <img src="${u?.avatar || defAva}" class="ava" style="width:35px; height:35px">
+                            <div>
+                                <div style="font-weight:800">${name}</div>
+                                <div class="streak-mini">🔥 ${streak} дн.</div>
+                            </div>
                         </div>
                     </div>
+                    <div style="margin-top:8px; font-size:0.9rem; border-top:1px solid var(--border); padding-top:5px">
+                        ${todayTask ? `✅ ${todayTask.text} ${parseMedia(todayTask.text)}` : '😴 Нет отчета'}
+                    </div>
                 </div>`;
+            }).join('');
         });
-    });
 
-    initCalendar();
+        onSnapshot(query(collection(db, "chats"), orderBy("ts", "asc")), s => {
+            document.getElementById('chatMsgs').innerHTML = s.docs.map(d => {
+                const m = d.data();
+                const u = users[m.user];
+                return `<div class="msg-row ${m.user === currentUser ? 'me' : ''}">
+                    <img src="${u?.avatar || defAva}" class="ava" style="width:30px; height:30px">
+                    <div class="msg ${m.user === currentUser ? 'me' : ''}">
+                        <div style="font-weight:800; font-size:0.8rem">${m.user}</div>
+                        <div class="streak-mini" style="font-size:0.7rem">🔥 ${getStreak(u?.tasks)} дн.</div>
+                        <div style="margin-top:4px">${m.text}</div>
+                        ${parseMedia(m.text)}
+                        ${m.user === currentUser ? `<button class="del-btn" onclick="deleteItem('chats','${d.id}')">Удалить</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+            const c = document.getElementById('chatMsgs'); c.scrollTop = c.scrollHeight;
+        });
+
+        onSnapshot(query(collection(db, "feed"), orderBy("ts", "desc")), s => {
+            document.getElementById('feedList').innerHTML = s.docs.map(d => {
+                const f = d.data();
+                const u = users[f.author];
+                return `<div class="card">
+                    <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px">
+                        <img src="${u?.avatar || defAva}" class="ava">
+                        <div>
+                            <div style="font-weight:800">${f.author}</div>
+                            <div class="streak-mini">🔥 ${getStreak(u?.tasks)} дн.</div>
+                        </div>
+                    </div>
+                    <div style="overflow-wrap:anywhere">${f.text}</div>
+                    ${parseMedia(f.text)}
+                    ${f.author === currentUser ? `<button class="del-btn" onclick="deleteItem('feed','${d.id}')">Удалить</button>` : ''}
+                </div>`;
+            }).join('');
+        });
+
+        onSnapshot(query(collection(db, "kb"), orderBy("ts", "desc")), s => {
+            document.getElementById('kbList').innerHTML = s.docs.map(d => {
+                const i = d.data();
+                const isLink = i.type === 'link';
+                return `<div class="card">
+                    <div style="font-size:0.75rem; opacity:0.5; margin-bottom:5px">${i.author} • ${isLink ? 'РЕСУРС' : 'КОД'}</div>
+                    <h4 style="margin:0">${i.title}</h4>
+                    ${isLink ? `<a href="${i.content}" target="_blank" class="full-link">${i.content}</a>` : `<div class="code-view">${i.content.replace(/</g, "&lt;")}</div>`}
+                    ${i.author === currentUser ? `<button class="del-btn" onclick="deleteItem('kb','${d.id}')">Удалить</button>` : ''}
+                </div>`;
+            }).join('');
+        });
+    }
 </script>
 </body>
 </html>
